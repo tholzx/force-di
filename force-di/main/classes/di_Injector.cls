@@ -25,72 +25,75 @@
  **/
 
 public class di_Injector {
-    @testVisible
-    private static List<di_BindingConfigWrapper> mock_BindingConfigurationWrappersOuter = null;
-    /**
-     * Default Injector instance configured via Custom Metadata bindings
-     **/
-    public static final di_Injector Org =
-        new di_Injector(
-            new List<di_Module> {
-                new CustomMetadataModule()});
+	/**
+	 * Mock for Binding__mdt object
+	 **/
+	private static List<di_BindingConfigWrapper> mock_BindingConfigurationWrappersOuter = null;
+	
+	/**
+	 * Default Injector instance configured via Custom Metadata bindings
+	 **/
+	public static final di_Injector Org =
+		new di_Injector(
+			new List<di_Module> {
+				new CustomMetadataModule()});
 
-    /**
-     * Bindings visible to this Injector
-     **/
-    public di_Binding.Resolver Bindings {get; private set;}
+	/**
+	 * Bindings visible to this Injector
+	 **/
+	public di_Binding.Resolver Bindings {get; private set;}
 
-    /**
-     * Configures the Injector with the bindings configured by the given Module
-     **/
-    public di_Injector(di_Module module) {
-        this(new List<di_Module> { module });
-    }
+	/**
+	 * Configures the Injector with the bindings configured by the given Module
+	 **/
+	public di_Injector(di_Module module) {
+		this(new List<di_Module> { module });
+	}
 
-    /**
-     * Configures the Injector with the bindings configured by the given Modules
-     **/
-    public di_Injector(List<di_Module> modules) {
-        Bindings = new di_Binding.Resolver(modules);
-    }
+	/**
+	 * Configures the Injector with the bindings configured by the given Modules
+	 **/
+	public di_Injector(List<di_Module> modules) {
+		Bindings = new di_Binding.Resolver(modules);
+	}
 
-    /**
-     * Creates an instance of the object configured for the class name binding
-     **/
-    public Object getInstance(Type developerNameByType) {
-        return getInstance(developerNameByType == null ? null : developerNameByType.getName().toLowerCase(), null);
-    }
+	/**
+	 * Creates an instance of the object configured for the class name binding
+	 **/
+	public Object getInstance(Type developerNameByType) {
+		return getInstance(developerNameByType == null ? null : developerNameByType.getName().toLowerCase(), null);
+	}
 
-    /**
-     * Creates an instance of the object configured for the class name binding
-     *   (if params is specified, implicitly uses the Provider interface)
-     **/
-    public Object getInstance(Type developerNameByType, Object params) {
-        return getInstance(developerNameByType == null ? null : developerNameByType.getName().toLowerCase(), params);
-    }
+	/**
+	 * Creates an instance of the object configured for the class name binding
+	 *   (if params is specified, implicitly uses the Provider interface)
+	 **/
+	public Object getInstance(Type developerNameByType, Object params) {
+		return getInstance(developerNameByType == null ? null : developerNameByType.getName().toLowerCase(), params);
+	}
 
-    /**
-     * Creates an instance of the object configured for the named binding
-     **/
-    public Object getInstance(String developerName) {
-        return getInstance(developerName, null);
-    }
+	/**
+	 * Creates an instance of the object configured for the named binding
+	 **/
+	public Object getInstance(String developerName) {
+		return getInstance(developerName, null);
+	}
 
-    /**
-     * Creates an instance of the object configured for the named binding
-     *   (if params is specified, implicitly uses the Provider interface)
-     **/
-    public Object getInstance(String developerName, Object params) {
-        if ( String.isBlank(developerName) ) {
-            throw new InjectorException('Request for Binding cannot take "developerName" parameter of null');
-        }
+	/**
+	 * Creates an instance of the object configured for the named binding
+	 *   (if params is specified, implicitly uses the Provider interface)
+	 **/
+	public Object getInstance(String developerName, Object params) {
+		if (String.isBlank(developerName)) {
+			throw new InjectorException('Request for Binding cannot take "developerName" parameter of null');
+		}
 
-        List<di_Binding> bindingsFound = this.Bindings.byName( developerName.toLowerCase().trim() ).get();
-        if ( bindingsFound == null || bindingsFound.isEmpty() ) {
-            throw new InjectorException('Binding for "' + developerName + '" not found');
-        }
-        return bindingsFound[0].getInstance(params);
-    }
+		List<di_Binding> bindingsFound = this.Bindings.byName( developerName.toLowerCase().trim() ).get();
+		if (bindingsFound == null || bindingsFound.isEmpty()) {
+			throw new InjectorException('Binding for "' + developerName + '" not found');
+		}
+		return bindingsFound[0].getInstance(params);
+	}
 
     /**
      * Creates an instance of the object configured for the named binding and the binding SObjectType
@@ -131,63 +134,74 @@ public class di_Injector {
 
     }
 
-    /**
-     * A Module that loads bindings configured via the Binding__mdt object
-     **/
-    @testVisible
-    private class CustomMetadataModule extends di_Module {
+	/**
+	 * A Module that loads bindings configured via the Binding__mdt object
+	 **/
+	@testVisible
+	private class CustomMetadataModule extends di_Module {
 
-        private string bindingObjectApiName = null;
-        @testVisible
-        private List<di_BindingConfigWrapper> bindingWrapperList = getDIBinding();
-        // Method to convert a metadata into a wrapper class,
-        // so that we can inject dependencies from test classes.
-        @testVisible
-        private List<di_BindingConfigWrapper> getDIBinding(){
-            List<di_BindingConfigWrapper> recordList = new List<di_BindingConfigWrapper>();
-            List<di_Binding__mdt> bindingMDTRec = [SELECT QualifiedAPIName
-                                                        , DeveloperName
-                                                        , NamespacePrefix
-                                                        , Type__c
-                                                        , To__c
-                                                        , BindingObject__c
-                                                        , BindingObject__r.QualifiedApiName
-                                                        , BindingObjectAlternate__c
-                                                        , BindingSequence__c
-                                                        FROM di_Binding__mdt];
-            for(di_Binding__mdt records :bindingMDTRec){
-                recordList.add(new di_BindingConfigWrapper(records));
-            }
-            // When we want to mock data from metadata for injecting dependencies.
-            if(di_Injector.mock_BindingConfigurationWrappersOuter != null){
-                recordList = di_Injector.mock_BindingConfigurationWrappersOuter;
-            }
-            return recordList;
-        }
-        public override void configure() {
-            // TODO: Support Namespace
-            for(di_BindingConfigWrapper bindingConfig :getDIBinding()){
-                bind(bindingConfig.DeveloperName);
-                type(bindingConfig.Type);
-                if( String.isNotBlank(bindingConfig.BindingObject)
-                    || String.isNotBlank(bindingConfig.BindingObjectAlternate)){
-                    bindingObjectApiName =  String.isNotBlank(bindingConfig.BindingObject)
-                                            ? bindingConfig.bindingObjectQualifiedApiName.toLowerCase().trim()
-                                            : bindingConfig.BindingObjectAlternate.toLowerCase().trim();
-                    Schema.DescribeSobjectResult[] results = Schema.describeSObjects(new String[] { bindingObjectApiName });
-                    if(results.size() != 1) {
-                        throw new InjectorException('Failed to find SObject ' + bindingObjectApiName + ' referenced by binding ' + bindingConfig.DeveloperName);
-                    }
-                    bind(results[0].getSObjectType()); // if it is getting here, then it is finding a SObject to add to the binding
-                }
-                if(bindingConfig.BindingSequence != null){
-                    sequence(Integer.valueOf(bindingConfig.BindingSequence));
-                }
-                data(bindingConfig);
-                to(bindingConfig.To);
-            }
-        }
-    }
+		private Map<String, Schema.SObjectType> objectApiNameToSobjectTypeMap;
+		
+		private List<di_BindingConfigWrapper> bindingWrapperList = getDiBindings();
+		
+		// Method to convert a metadata into a wrapper class,
+		// so that we can inject dependencies from test classes.
+		private List<di_BindingConfigWrapper> getDiBindings() {
+			// When we want to mock data from metadata for injecting dependencies.
+			if (di_Injector.mock_BindingConfigurationWrappersOuter != null) {
+				return di_Injector.mock_BindingConfigurationWrappersOuter;
+			}
 
-    public class InjectorException extends Exception {}
+			List<di_BindingConfigWrapper> recordList = new List<di_BindingConfigWrapper>();
+			List<di_Binding__mdt> bindingMdtRecords = [SELECT QualifiedAPIName
+															, DeveloperName
+															, NamespacePrefix
+															, Type__c
+															, To__c
+															, BindingObject__c
+															, BindingObject__r.QualifiedApiName
+															, BindingObjectAlternate__c
+															, BindingSequence__c
+													   FROM di_Binding__mdt];
+			for (di_Binding__mdt record : bindingMdtRecords) {
+				recordList.add(new di_BindingConfigWrapper(record));
+			}
+			return recordList;
+		}
+
+		public override void configure() {
+			// TODO: Support Namespace
+			objectApiNameToSobjectTypeMap = new Map<String, Schema.SObjectType>();
+			for (di_BindingConfigWrapper bindingConfig : bindingWrapperList) {
+				bind(bindingConfig.DeveloperName);
+				type(bindingConfig.Type);
+
+				String bindingObjectApiName;
+				if (!String.isBlank(bindingConfig.BindingObject)) {
+					bindingObjectApiName = bindingConfig.bindingObjectQualifiedApiName.toLowerCase().trim();
+				} else if (!String.isBlank(bindingConfig.BindingObjectAlternate)) {
+					bindingObjectApiName = bindingConfig.BindingObjectAlternate.toLowerCase().trim();
+				}
+				if (!String.isBlank(bindingObjectApiName)) {
+					if (!objectApiNameToSobjectTypeMap.containsKey(bindingObjectApiName)) {
+						Schema.DescribeSobjectResult[] results = Schema.describeSObjects(new String[] { bindingObjectApiName });
+						if (results.isEmpty() || results.size() != 1) {
+							throw new InjectorException('Failed to find SObject ' + bindingObjectApiName + ' referenced by binding ' + bindingConfig.DeveloperName);
+						}
+
+						objectApiNameToSobjectTypeMap.put(bindingObjectApiName, results[0].getSObjectType());
+					}
+					bind(objectApiNameToSobjectTypeMap.get(bindingObjectApiName));
+				}
+				if (bindingConfig.BindingSequence != null) {
+					sequence(Integer.valueOf(bindingConfig.BindingSequence));
+				}
+				data(bindingConfig);
+				to(bindingConfig.To);
+			}
+		}
+    
+	}
+
+	public class InjectorException extends Exception {}
 }
